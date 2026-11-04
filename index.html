@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>CNE Evaluation Form | Security Forces Hospital Dammam</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="demo-flag" class="demo-flag" hidden>Preview mode: not connected to Google Sheets yet. Nothing will be saved.</div>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo-ncpd"><img src="assets/ncpd-logo.png" alt="NCPD Accredited Provider with Distinction, American Nurses Credentialing Center"></div>
+      <div class="brand-title">
+        <h1>Nursing Education and Staff Development</h1>
+        <p class="dept">Nursing Department</p>
+      </div>
+      <div class="logo-hospital"><img src="assets/hospital-logo.png" alt="Security Forces Hospital Dammam"></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <ol class="stepper" id="stepper" aria-label="Progress" hidden>
+      <li data-step="1" class="active"><span class="dot">1</span><span class="lbl">Instructions</span></li>
+      <li class="bar" aria-hidden="true"></li>
+      <li data-step="2"><span class="dot">2</span><span class="lbl">Your details</span></li>
+      <li class="bar" aria-hidden="true"></li>
+      <li data-step="3"><span class="dot">3</span><span class="lbl">Evaluation</span></li>
+      <li class="timer" id="timer" hidden aria-live="off"></li>
+    </ol>
+
+    <!-- Loading -->
+    <section id="s-loading" class="card state" aria-live="polite">
+      <div class="spinner" role="presentation"></div>
+      <p>Loading the evaluation form…</p>
+    </section>
+
+    <!-- Load error -->
+    <section id="s-error" class="card state warn" hidden>
+      <div class="mark" aria-hidden="true">!</div>
+      <h2 tabindex="-1">The form could not load</h2>
+      <p>Check your internet connection, then try again.</p>
+      <div class="actions" style="justify-content:center"><button type="button" class="btn" id="retry">Try again</button></div>
+    </section>
+
+    <!-- Closed -->
+    <section id="s-closed" class="card state warn" hidden>
+      <div class="mark" aria-hidden="true">⏱</div>
+      <h2 tabindex="-1">This evaluation is closed</h2>
+      <p>The evaluation link is only available for a limited time. If you attended and still need to submit, contact the Nursing Education office.</p>
+    </section>
+
+    <!-- Already submitted -->
+    <section id="s-already" class="card state" hidden>
+      <div class="mark" aria-hidden="true">✓</div>
+      <h2 tabindex="-1">You already submitted this evaluation</h2>
+      <p>Only one evaluation per person is accepted for each lecture. Thank you for your feedback.</p>
+    </section>
+
+    <!-- Step 1: Instructions -->
+    <section id="s-1" class="card" hidden>
+      <h2 tabindex="-1">CNE Evaluation Form</h2>
+
+      <p class="lead-quote">“Security Forces Hospital Program Dammam Is Accredited As Provider Of Nursing Continuing Nursing Professional Development By American Nurses Credentialing Center’s Commission On Accreditation”</p>
+
+      <p>This Presentation Accredited By <strong><u>One Contact Hour</u></strong>.</p>
+
+      <p class="notice">“No planners, presenters, or content reviewers have any relevant financial relationship with ineligible companies to disclose”</p>
+
+      <h3>Read the instructions carefully</h3>
+      <p style="margin-bottom:4px">To get CE hours and compensatory hours you must:</p>
+      <ol class="steps-list">
+        <li><span><strong>Fill the Evaluation form.</strong></span></li>
+        <li><span><strong>Write your name to match your attendance.</strong></span></li>
+        <li><span>Be sure that you <strong><u>enter your Saudi council number correctly</u></strong>.</span></li>
+        <li><span><strong>Evaluation link available for <u>one hour</u>.</strong></span></li>
+      </ol>
+
+      <div class="code-row" id="code-row" hidden>
+        <div class="field" id="f-code" style="margin-bottom:0">
+          <label for="code">Access code</label>
+          <input class="code-input" id="code" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" maxlength="40">
+          <p class="err-msg" id="e-code" role="alert"></p>
+        </div>
+        <p class="notice" style="margin:8px 0 0">The code is shown in the lecture hall.</p>
+      </div>
+
+      <div class="actions">
+        <button type="button" class="btn" id="start">Start evaluation</button>
+      </div>
+    </section>
+
+    <!-- Step 2: Details -->
+    <section id="s-2" class="card" hidden>
+      <h2 tabindex="-1">Your details</h2>
+
+      <dl class="lecture" aria-label="Lecture">
+        <dt>Topic</dt><dd id="v-topic"></dd>
+        <dt>Speaker</dt><dd id="v-speaker"></dd>
+        <dt>Date</dt><dd id="v-date"></dd>
+      </dl>
+
+      <div class="field" id="f-name">
+        <label for="name">Full Name</label>
+        <input id="name" type="text" autocomplete="name" maxlength="100">
+        <p class="err-msg" id="e-name" role="alert"></p>
+      </div>
+      <div class="field" id="f-id">
+        <label for="idno">ID No.</label>
+        <input id="idno" type="text" autocomplete="off" inputmode="text" maxlength="30">
+        <p class="err-msg" id="e-id" role="alert"></p>
+      </div>
+      <div class="field" id="f-council">
+        <label for="council">Saudi Council No.</label>
+        <input id="council" type="text" autocomplete="off" inputmode="text" maxlength="40">
+        <p class="err-msg" id="e-council" role="alert"></p>
+      </div>
+
+      <fieldset class="field" id="f-unit">
+        <legend>Unit</legend>
+        <div class="opts units" id="units"></div>
+        <div class="other-wrap" id="other-wrap" hidden>
+          <label for="other-unit" class="opt-tag" style="margin:0 0 4px;display:block">Write your unit</label>
+          <input id="other-unit" type="text" maxlength="60" style="width:100%;font:inherit;padding:11px 12px;border:1.5px solid #B9D0D2;border-radius:8px">
+        </div>
+        <p class="err-msg" id="e-unit" role="alert"></p>
+      </fieldset>
+
+      <div class="actions">
+        <button type="button" class="btn secondary" id="back-1">Back</button>
+        <button type="button" class="btn" id="next-2">Continue</button>
+      </div>
+    </section>
+
+    <!-- Step 3: Questions -->
+    <section id="s-3" class="card" hidden>
+      <h2 tabindex="-1">Evaluation</h2>
+      <p class="section-note">Answer every question unless it is marked optional.</p>
+      <div id="questions"></div>
+
+      <div class="banner error" id="submit-error" role="alert" hidden></div>
+      <div class="actions">
+        <button type="button" class="btn secondary" id="back-2">Back</button>
+        <button type="button" class="btn gold" id="submit">Submit evaluation</button>
+      </div>
+    </section>
+
+    <!-- Done -->
+    <section id="s-done" class="card state" hidden>
+      <div class="mark" aria-hidden="true">✓</div>
+      <h2 tabindex="-1">Thank you. Your evaluation was submitted.</h2>
+      <p>You can close this page now.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">Security Forces Hospital Dammam · Nursing Education and Staff Development</footer>
+
+  <!-- Honeypot field (hidden from people, bots tend to fill it) -->
+  <input type="text" id="hp" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

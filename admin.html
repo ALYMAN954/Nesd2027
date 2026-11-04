@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>CNE Supervisor Panel | Security Forces Hospital Dammam</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Albert+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="logo-ncpd"><img src="assets/ncpd-logo.png" alt=""></div>
+      <div class="brand-title">
+        <h1>Supervisor Panel</h1>
+        <p class="dept">Nursing Education and Staff Development</p>
+      </div>
+      <div class="logo-hospital"><img src="assets/hospital-logo.png" alt="Security Forces Hospital Dammam"></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- Login -->
+    <section id="login" class="card">
+      <h2>Sign in</h2>
+      <div class="field" id="f-pw">
+        <label for="pw">Supervisor password</label>
+        <input id="pw" type="password" autocomplete="current-password" style="width:100%;font:inherit;padding:11px 12px;border:1.5px solid #B9D0D2;border-radius:8px">
+        <p class="err-msg" id="e-pw" role="alert"></p>
+      </div>
+      <div class="actions"><button type="button" class="btn" id="login-btn">Sign in</button></div>
+    </section>
+
+    <!-- Panel -->
+    <div id="panel" class="admin-grid" hidden>
+
+      <section class="card">
+        <h2>Form status</h2>
+        <div class="kv">
+          <span class="badge closed" id="status-badge">Closed</span>
+          <span id="status-note" class="notice"></span>
+        </div>
+        <div class="kv"><div><div class="big-count" id="count">0</div><div class="notice">responses for this lecture</div></div></div>
+
+        <div class="row" style="margin-top:6px">
+          <div class="field">
+            <label for="mins" style="font-size:.9rem">Open for (minutes, 0 = no limit)</label>
+            <input id="mins" class="mini-input" type="number" min="0" max="1440" value="60">
+          </div>
+          <button type="button" class="btn small" id="open-btn" style="align-self:flex-end">Open form</button>
+          <button type="button" class="btn small danger" id="close-btn" style="align-self:flex-end">Close form</button>
+        </div>
+        <p class="notice" style="margin:12px 0 0">The instructions say the link is available for one hour, so 60 is the default.</p>
+      </section>
+
+      <section class="card">
+        <h2>Lecture details</h2>
+        <div class="field"><label for="a-topic">Topic</label>
+          <input id="a-topic" type="text" maxlength="150"></div>
+        <div class="field"><label for="a-speaker">Speaker</label>
+          <input id="a-speaker" type="text" maxlength="100"></div>
+        <div class="field"><label for="a-date">Date</label>
+          <input id="a-date" type="text" maxlength="40"></div>
+        <div class="field"><label for="a-code">Access code <span class="opt-tag">Leave empty for no code</span></label>
+          <input id="a-code" type="text" maxlength="40" autocomplete="off"></div>
+        <div class="field" style="margin-bottom:6px">
+          <div class="opt" style="display:flex;align-items:flex-start;gap:10px">
+            <input id="a-new" type="checkbox" style="width:20px;height:20px;margin-top:3px;position:static;opacity:1">
+            <label for="a-new" style="font-weight:500;min-height:0;display:block;border:0;padding:0;text-align:left;background:none;justify-content:flex-start;cursor:pointer">
+              This is a <strong>new lecture</strong>: start a fresh session so people who evaluated the previous lecture can submit again. The form is closed until you open it.
+            </label>
+          </div>
+        </div>
+        <div class="banner" id="save-msg" hidden></div>
+        <div class="actions"><button type="button" class="btn gold" id="save-btn">Save changes</button></div>
+      </section>
+
+      <section class="card">
+        <h2>Participant link and results</h2>
+        <p class="notice">Share this link with participants:</p>
+        <div class="link-box" id="link-box"></div>
+        <div class="actions">
+          <button type="button" class="btn small secondary" id="copy-btn">Copy link</button>
+          <a class="btn small" id="sheet-link" href="#" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center">Open Google Sheet</a>
+        </div>
+      </section>
+
+      <div class="actions" style="margin-top:0"><button type="button" class="btn small secondary" id="logout-btn">Sign out</button></div>
+    </div>
+  </main>
+
+  <script src="config.js"></script>
+  <script>
+  (function () {
+    'use strict';
+    var API = (window.CNE_CONFIG && window.CNE_CONFIG.API_URL) || '';
+    var password = '';
+    var tick = null;
+    function $(id) { return document.getElementById(id); }
+
+    function call(body) {
+      if (!API) return Promise.resolve({ ok: false, error: 'NOT_CONFIGURED', message: 'API_URL is empty in config.js.' });
+      body.password = password;
+      return fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) })
+        .then(function (r) { return r.json(); });
+    }
+
+    function flash(msg, type) {
+      var b = $('save-msg');
+      b.textContent = msg; b.className = 'banner ' + (type || 'ok'); b.hidden = false;
+    }
+
+    function render(d, keepFields) {
+      $('panel').hidden = false; $('login').hidden = true;
+      if (!keepFields) {
+        $('a-topic').value = d.topic; $('a-speaker').value = d.speaker; $('a-date').value = d.date; $('a-code').value = d.code || '';
+      }
+      $('count').textContent = d.responses;
+      var badge = $('status-badge');
+      badge.textContent = d.open ? 'Open' : 'Closed';
+      badge.className = 'badge ' + (d.open ? 'open' : 'closed');
+      clearInterval(tick);
+      var note = $('status-note');
+      if (d.open && d.closesAt) {
+        var off = d.serverNow - Date.now();
+        var f = function () {
+          var left = d.closesAt - (Date.now() + off);
+          if (left <= 0) { note.textContent = 'Time is up. The form is now closed.'; badge.textContent = 'Closed'; badge.className = 'badge closed'; clearInterval(tick); return; }
+          var m = Math.floor(left / 60000), s = Math.floor((left % 60000) / 1000);
+          note.textContent = 'Closes automatically in ' + m + ':' + String(s).padStart(2, '0');
+        };
+        f(); tick = setInterval(f, 1000);
+      } else if (d.open) { note.textContent = 'Open with no time limit.'; }
+      else { note.textContent = 'Participants see a "closed" message.'; }
+
+      var base = location.href.replace(/admin\.html.*$/, '');
+      $('link-box').textContent = base;
+      $('sheet-link').href = d.sheetUrl;
+    }
+
+    function login() {
+      password = $('pw').value;
+      $('e-pw').textContent = '';
+      call({ action: 'admin_get' }).then(function (d) {
+        if (d.ok) { try { sessionStorage.setItem('cne_admin_pw', password); } catch (e) {} render(d); }
+        else { $('e-pw').textContent = d.message || 'Could not sign in.'; $('f-pw').classList.add('invalid'); }
+      }).catch(function () { $('e-pw').textContent = 'Could not reach the server.'; });
+    }
+
+    $('login-btn').addEventListener('click', login);
+    $('pw').addEventListener('keydown', function (e) { if (e.key === 'Enter') login(); });
+
+    $('save-btn').addEventListener('click', function () {
+      var isNew = $('a-new').checked;
+      if (isNew && !confirm('Start a new lecture session? The form will be closed until you open it again.')) return;
+      call({
+        action: 'admin_save',
+        topic: $('a-topic').value, speaker: $('a-speaker').value, date: $('a-date').value,
+        code: $('a-code').value, newSession: isNew
+      }).then(function (d) {
+        if (d.ok) { $('a-new').checked = false; render(d); flash(isNew ? 'Saved. New lecture session started. Open the form when you are ready.' : 'Saved.'); }
+        else flash(d.message || 'Could not save.', 'error');
+      }).catch(function () { flash('Could not reach the server.', 'error'); });
+    });
+
+    $('open-btn').addEventListener('click', function () {
+      call({ action: 'admin_open', minutes: Number($('mins').value) || 0 }).then(function (d) {
+        if (d.ok) render(d, true); else flash(d.message || 'Could not open the form.', 'error');
+      });
+    });
+    $('close-btn').addEventListener('click', function () {
+      call({ action: 'admin_close' }).then(function (d) {
+        if (d.ok) render(d, true); else flash(d.message || 'Could not close the form.', 'error');
+      });
+    });
+    $('copy-btn').addEventListener('click', function () {
+      var t = $('link-box').textContent;
+      (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(function () {
+        $('copy-btn').textContent = 'Copied';
+        setTimeout(function () { $('copy-btn').textContent = 'Copy link'; }, 1500);
+      }).catch(function () {});
+    });
+    $('logout-btn').addEventListener('click', function () {
+      try { sessionStorage.removeItem('cne_admin_pw'); } catch (e) {}
+      password = ''; location.reload();
+    });
+
+    try {
+      var saved = sessionStorage.getItem('cne_admin_pw');
+      if (saved) { $('pw').value = saved; login(); }
+    } catch (e) {}
+  })();
+  </script>
+</body>
+</html>

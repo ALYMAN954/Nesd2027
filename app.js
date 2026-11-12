@@ -49,6 +49,15 @@
 
   function post(payload) {
     if (DEMO) {
+      if (payload.action === 'lookup') {
+        return new Promise(function (res) {
+          setTimeout(function () {
+            res(String(payload.idNo).trim() === '123456'
+              ? { ok: true, found: true, name: 'Test Nurse', council: 'SCFHS-1', unit: 'Other: Dialysis' }
+              : { ok: true, found: false });
+          }, 300);
+        });
+      }
       return new Promise(function (res) {
         setTimeout(function () { res({ ok: true }); }, 500);
       });
@@ -291,6 +300,81 @@
       setErr('f-code', 'e-code', 'Could not reach the server. Check your connection and try again.');
     });
   });
+
+  /* ------------------------------------------------------------------ */
+  /* Staff directory: fill the details as soon as the ID is typed        */
+  /* ------------------------------------------------------------------ */
+
+  var lookupTimer = null, lookupSeq = 0, lookupCache = {}, filled = null;
+
+  function setFindMsg(text) {
+    var m = $('find-msg');
+    m.textContent = text || '';
+    m.hidden = !text;
+  }
+
+  function fillUnit(unit) {
+    var other = /^Other:\s*(.+)$/.exec(unit || '');
+    var want = other ? 'Other' : unit;
+    var radios = document.querySelectorAll('input[name="unit"]');
+    var hit = null;
+    Array.prototype.forEach.call(radios, function (r) { r.checked = false; if (r.value === want) hit = r; });
+    if (!hit) { $('other-wrap').hidden = true; return; }
+    hit.checked = true;
+    $('other-wrap').hidden = !other;
+    $('other-unit').value = other ? other[1] : '';
+    setErr('f-unit', 'e-unit', '');
+  }
+
+  function currentUnitText() {
+    var u = checkedValue('unit');
+    return u === 'Other' ? 'Other: ' + val('other-unit') : u;
+  }
+
+  function applyLookup(r) {
+    if (r && r.found) {
+      $('name').value = r.name || '';
+      $('council').value = r.council || '';
+      fillUnit(r.unit);
+      ['f-name', 'f-council'].forEach(function (b) { setErr(b, 'e-' + b.slice(2), ''); });
+      filled = { name: val('name'), council: val('council'), unit: currentUnitText() };
+      setFindMsg('Your details were found. Check them and correct anything that has changed.');
+      return;
+    }
+    // Not found: clear anything we filled for a previous ID (only if the person has not edited it)
+    if (filled) {
+      if (val('name') === filled.name) $('name').value = '';
+      if (val('council') === filled.council) $('council').value = '';
+      if (currentUnitText() === filled.unit) {
+        Array.prototype.forEach.call(document.querySelectorAll('input[name="unit"]'), function (x) { x.checked = false; });
+        $('other-wrap').hidden = true; $('other-unit').value = '';
+      }
+      filled = null;
+    }
+    setFindMsg('This ID is not saved yet. Fill in your details; they will appear automatically next time.');
+  }
+
+  function runLookup() {
+    clearTimeout(lookupTimer);
+    var id = val('idno');
+    if (id.length < 3) { setFindMsg(''); return; }
+    if (Object.prototype.hasOwnProperty.call(lookupCache, id)) { applyLookup(lookupCache[id]); return; }
+    var seq = ++lookupSeq;
+    post({ action: 'lookup', sessionId: cfg.sessionId, idNo: id }).then(function (r) {
+      if (seq !== lookupSeq || val('idno') !== id) return;       // a newer ID was typed meanwhile
+      if (!r || !r.ok) { setFindMsg(''); return; }               // stay quiet: the person can type everything
+      lookupCache[id] = r;
+      applyLookup(r);
+    }).catch(function () { if (seq === lookupSeq) setFindMsg(''); });
+  }
+
+  $('idno').addEventListener('input', function () {
+    clearTimeout(lookupTimer);
+    lookupSeq++;                                                  // ignore any answer still on its way
+    setFindMsg('');
+    if (val('idno').length >= 3) lookupTimer = setTimeout(runLookup, 650);
+  });
+  $('idno').addEventListener('blur', function () { if (val('idno').length >= 3) runLookup(); });
 
   $('back-1').addEventListener('click', function () { show('s-1'); });
   $('back-2').addEventListener('click', function () { show('s-2'); });

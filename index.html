@@ -105,15 +105,16 @@
         <dt>Date</dt><dd id="v-date"></dd>
       </dl>
 
+      <div class="field" id="f-id">
+        <label for="idno">ID No.</label>
+        <input id="idno" type="text" autocomplete="off" inputmode="text" maxlength="30">
+        <p class="notice" id="find-msg" role="status" aria-live="polite" hidden></p>
+        <p class="err-msg" id="e-id" role="alert"></p>
+      </div>
       <div class="field" id="f-name">
         <label for="name">Full Name</label>
         <input id="name" type="text" autocomplete="name" maxlength="100">
         <p class="err-msg" id="e-name" role="alert"></p>
-      </div>
-      <div class="field" id="f-id">
-        <label for="idno">ID No.</label>
-        <input id="idno" type="text" autocomplete="off" inputmode="text" maxlength="30">
-        <p class="err-msg" id="e-id" role="alert"></p>
       </div>
       <div class="field" id="f-council">
         <label for="council">Saudi Council No.</label>

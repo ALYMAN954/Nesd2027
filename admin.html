@@ -43,7 +43,7 @@
           <span class="badge closed" id="status-badge">Closed</span>
           <span id="status-note" class="notice"></span>
         </div>
-        <div class="kv"><div><div class="big-count" id="count">0</div><div class="notice">responses for this lecture</div></div></div>
+        <div class="kv"><div><div class="big-count" id="count">0</div><div class="notice">responses for this lecture</div><div class="notice" style="margin-top:2px">Saved in tab: <strong id="tab-name">-</strong></div></div></div>
 
         <div class="row" style="margin-top:6px">
           <div class="field">
@@ -66,6 +66,24 @@
           <input id="a-date" type="text" maxlength="40"></div>
         <div class="field"><label for="a-code">Access code <span class="opt-tag">Leave empty for no code</span></label>
           <input id="a-code" type="text" maxlength="40" autocomplete="off"></div>
+        <div class="field">
+          <label>Code works only between <span class="opt-tag">Leave empty for no time limit. Outside this time the form stops accepting the code automatically.</span></label>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <label style="font-weight:500;font-size:.9rem;flex:1 1 200px">From<input id="a-from" type="datetime-local" class="mini-input" style="width:100%;margin-top:4px"></label>
+            <label style="font-weight:500;font-size:.9rem;flex:1 1 200px">Until<input id="a-until" type="datetime-local" class="mini-input" style="width:100%;margin-top:4px"></label>
+          </div>
+          <p class="notice" id="code-state" style="margin:6px 0 0"></p>
+        </div>
+        <div class="field">
+          <label>Hospital location <span class="opt-tag">Only a flag in the sheet (inside / outside / refused). Nobody is blocked.</span></label>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <label style="font-weight:500;font-size:.9rem;flex:1 1 140px">Latitude<input id="a-lat" type="text" inputmode="decimal" class="mini-input" style="width:100%;margin-top:4px"></label>
+            <label style="font-weight:500;font-size:.9rem;flex:1 1 140px">Longitude<input id="a-lng" type="text" inputmode="decimal" class="mini-input" style="width:100%;margin-top:4px"></label>
+            <label style="font-weight:500;font-size:.9rem;flex:1 1 100px">Radius (m)<input id="a-radius" type="text" inputmode="numeric" class="mini-input" style="width:100%;margin-top:4px" value="300"></label>
+          </div>
+          <div class="actions" style="margin-top:8px"><button type="button" class="btn small secondary" id="loc-btn">Use my current location</button></div>
+          <p class="notice" id="loc-msg" style="margin:6px 0 0">Stand inside the hospital, press the button, then press Save changes.</p>
+        </div>
         <div class="field" style="margin-bottom:6px">
           <div class="opt" style="display:flex;align-items:flex-start;gap:10px">
             <input id="a-new" type="checkbox" style="width:20px;height:20px;margin-top:3px;position:static;opacity:1">
@@ -113,12 +131,25 @@
       b.textContent = msg; b.className = 'banner ' + (type || 'ok'); b.hidden = false;
     }
 
+    function pad(n) { return String(n).padStart(2, '0'); }
+    function toLocalInput(ms) {
+      if (!ms) return '';
+      var x = new Date(ms);
+      return x.getFullYear() + '-' + pad(x.getMonth() + 1) + '-' + pad(x.getDate()) + 'T' + pad(x.getHours()) + ':' + pad(x.getMinutes());
+    }
+    function fromLocalInput(v) { var t = v ? new Date(v).getTime() : 0; return isFinite(t) ? t : 0; }
+
     function render(d, keepFields) {
       $('panel').hidden = false; $('login').hidden = true;
       if (!keepFields) {
         $('a-topic').value = d.topic; $('a-speaker').value = d.speaker; $('a-date').value = d.date; $('a-code').value = d.code || '';
+        $('a-from').value = toLocalInput(d.codeFrom); $('a-until').value = toLocalInput(d.codeUntil);
+        $('a-lat').value = d.lat || ''; $('a-lng').value = d.lng || ''; $('a-radius').value = d.radius || 300;
       }
+      var cs = { none: 'No access code is set.', active: 'The code is active now.', waiting: 'The code has not started yet.', expired: 'The code time is over: the form no longer accepts it.' };
+      $('code-state').textContent = cs[d.codeState] || '';
       $('count').textContent = d.responses;
+      $('tab-name').textContent = d.sheetName || '-';
       var badge = $('status-badge');
       badge.textContent = d.open ? 'Open' : 'Closed';
       badge.className = 'badge ' + (d.open ? 'open' : 'closed');
@@ -159,11 +190,26 @@
       call({
         action: 'admin_save',
         topic: $('a-topic').value, speaker: $('a-speaker').value, date: $('a-date').value,
-        code: $('a-code').value, newSession: isNew
+        code: $('a-code').value, newSession: isNew,
+        codeFrom: fromLocalInput($('a-from').value), codeUntil: fromLocalInput($('a-until').value),
+        lat: $('a-lat').value, lng: $('a-lng').value, radius: $('a-radius').value
       }).then(function (d) {
         if (d.ok) { $('a-new').checked = false; render(d); flash(isNew ? 'Saved. New lecture session started. Open the form when you are ready.' : 'Saved.'); }
         else flash(d.message || 'Could not save.', 'error');
       }).catch(function () { flash('Could not reach the server.', 'error'); });
+    });
+
+    $('loc-btn').addEventListener('click', function () {
+      var m = $('loc-msg');
+      if (!navigator.geolocation) { m.textContent = 'This browser cannot give its location.'; return; }
+      m.textContent = 'Getting your location…';
+      navigator.geolocation.getCurrentPosition(function (p) {
+        $('a-lat').value = p.coords.latitude.toFixed(6);
+        $('a-lng').value = p.coords.longitude.toFixed(6);
+        m.textContent = 'Location captured (accuracy about ' + Math.round(p.coords.accuracy) + ' m). Press Save changes to keep it.';
+      }, function () {
+        m.textContent = 'Could not get the location. Allow location access for this page and try again.';
+      }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
     });
 
     $('open-btn').addEventListener('click', function () {

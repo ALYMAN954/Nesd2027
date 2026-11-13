@@ -284,8 +284,27 @@
     $('v-date').textContent = cfg.date;
   }
 
+  /* Location: asked once on the first page; it is only a flag and never blocks the form */
+  var locPromise = null;
+  function requestLocation() {
+    if (locPromise) return locPromise;
+    locPromise = new Promise(function (resolve) {
+      if (!navigator.geolocation) { resolve(null); return; }
+      var done = false;
+      var finish = function (v) { if (!done) { done = true; resolve(v); } };
+      setTimeout(function () { finish(null); }, 12000);
+      try {
+        navigator.geolocation.getCurrentPosition(function (p) {
+          finish({ lat: p.coords.latitude, lng: p.coords.longitude });
+        }, function () { finish(null); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+      } catch (e) { finish(null); }
+    });
+    return locPromise;
+  }
+
   $('start').addEventListener('click', function () {
     var btn = $('start');
+    requestLocation();
     if (!cfg.codeRequired) { fillLecture(); show('s-2'); return; }
     var c = $('code').value.replace(/\s+/g, ' ').trim();
     if (!c) { setErr('f-code', 'e-code', 'Enter the access code.'); $('code').focus(); return; }
@@ -294,6 +313,7 @@
       btn.disabled = false;
       if (r.ok) { accessCode = c; fillLecture(); show('s-2'); }
       else if (r.error === 'CLOSED') { show('s-closed'); }
+      else if (r.error === 'CODE_TIME') { setErr('f-code', 'e-code', r.message); $('code').focus(); }
       else { setErr('f-code', 'e-code', r.message || 'The access code is not correct.'); $('code').focus(); }
     }).catch(function () {
       btn.disabled = false;
@@ -410,7 +430,10 @@
     var btn = $('submit');
     btn.disabled = true; btn.textContent = 'Submitting…';
 
-    post(payload).then(function (r) {
+    requestLocation().then(function (loc) {
+      payload.loc = loc;                       // null when declined or unavailable
+      return post(payload);
+    }).then(function (r) {
       submitting = false; btn.disabled = false; btn.textContent = 'Submit evaluation';
       if (r.ok) {
         try { localStorage.setItem('cne_done_' + cfg.sessionId, '1'); } catch (e) {}
@@ -426,6 +449,7 @@
           firstInvalid();
           break;
         case 'CLOSED': show('s-closed'); break;
+        case 'CODE_TIME': showSubmitError(r.message || 'The access code is not active now.'); break;
         case 'STALE': showSubmitError('This form was updated. Reload the page and fill it in again.'); break;
         case 'BAD_CODE': showSubmitError('The access code is not correct. Go back to the first page and enter it again.'); break;
         case 'INVALID': showSubmitError(r.message || 'Some answers are missing or invalid.'); break;

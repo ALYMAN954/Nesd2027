@@ -284,7 +284,7 @@
     $('v-date').textContent = cfg.date;
   }
 
-  /* Location: asked once on the first page; it is only a flag and never blocks the form */
+  /* Device id (location is no longer asked in this form) */
   // A random id kept in this browser. It only lets the coordinator see when one phone sent several forms.
   function deviceId() {
     try {
@@ -298,37 +298,9 @@
       return v;
     } catch (e) { return ''; }
   }
-  var locPromise = null;
-  // Resolves { lat, lng } or { err: 'denied' | 'timeout' | 'unavailable' | 'unsupported' }
-  function askPosition(high, ms) {
-    return new Promise(function (resolve) {
-      if (!navigator.geolocation) { resolve({ err: 'unsupported' }); return; }
-      var done = false;
-      var finish = function (v) { if (!done) { done = true; resolve(v); } };
-      // Safety net only. It is long on purpose because the person may take a while to answer the permission prompt.
-      setTimeout(function () { finish({ err: 'timeout' }); }, 90000);
-      try {
-        navigator.geolocation.getCurrentPosition(function (p) {
-          finish({ lat: p.coords.latitude, lng: p.coords.longitude });
-        }, function (e) {
-          finish({ err: e && e.code === 1 ? 'denied' : (e && e.code === 3 ? 'timeout' : 'unavailable') });
-        }, { enableHighAccuracy: high, timeout: ms, maximumAge: 60000 });
-      } catch (e) { finish({ err: 'unavailable' }); }
-    });
-  }
-  function requestLocation(force) {
-    if (locPromise && !force) return locPromise;
-    locPromise = askPosition(true, 20000).then(function (r) {
-      // A weak GPS signal indoors is common: try once more with the network location
-      if (r.err === 'timeout' || r.err === 'unavailable') return askPosition(false, 15000);
-      return r;
-    });
-    return locPromise;
-  }
 
   $('start').addEventListener('click', function () {
     var btn = $('start');
-    requestLocation();
     if (!cfg.codeRequired) { fillLecture(); show('s-2'); return; }
     var c = $('code').value.replace(/\s+/g, ' ').trim();
     if (!c) { setErr('f-code', 'e-code', 'Enter the access code.'); $('code').focus(); return; }
@@ -454,13 +426,7 @@
     var btn = $('submit');
     btn.disabled = true; btn.textContent = 'Submitting…';
 
-    requestLocation().then(function (r) {
-      // If the first try failed for a reason other than "denied", try once more now
-      if (r.err && r.err !== 'denied') { locPromise = askPosition(false, 8000); return locPromise; }   // one short last try
-      return r;
-    }).then(function (r) {
-      payload.loc = r.err ? null : { lat: r.lat, lng: r.lng };
-      payload.locErr = r.err || '';
+    Promise.resolve().then(function () {
       payload.dev = deviceId();
       return post(payload);
     }).then(function (r) {

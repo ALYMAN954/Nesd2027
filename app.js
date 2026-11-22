@@ -285,6 +285,19 @@
   }
 
   /* Location: asked once on the first page; it is only a flag and never blocks the form */
+  // A random id kept in this browser. It only lets the coordinator see when one phone sent several forms.
+  function deviceId() {
+    try {
+      var k = 'cne_dev', v = localStorage.getItem(k);
+      if (!v) {
+        var a = new Uint8Array(8);
+        (window.crypto || window.msCrypto).getRandomValues(a);
+        v = Array.prototype.map.call(a, function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+        localStorage.setItem(k, v);
+      }
+      return v;
+    } catch (e) { return ''; }
+  }
   var locPromise = null;
   // Resolves { lat, lng } or { err: 'denied' | 'timeout' | 'unavailable' | 'unsupported' }
   function askPosition(high, ms) {
@@ -448,6 +461,7 @@
     }).then(function (r) {
       payload.loc = r.err ? null : { lat: r.lat, lng: r.lng };
       payload.locErr = r.err || '';
+      payload.dev = deviceId();
       return post(payload);
     }).then(function (r) {
       submitting = false; btn.disabled = false; btn.textContent = 'Submit evaluation';

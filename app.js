@@ -354,7 +354,7 @@
       fillUnit(r.unit);
       ['f-name', 'f-council'].forEach(function (b) { setErr(b, 'e-' + b.slice(2), ''); });
       filled = { name: val('name'), council: val('council'), unit: currentUnitText() };
-      setFindMsg('Your details were found. Check them and correct anything that has changed.');
+      setFindMsg(r.partial ? 'Your name and unit were found from your attendance. Please enter your Saudi Council number.' : 'Your details were found. Check them and correct anything that has changed.');
       return;
     }
     // Not found: clear anything we filled for a previous ID (only if the person has not edited it)
